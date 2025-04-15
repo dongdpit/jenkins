@@ -1,0 +1,57 @@
+pipeline { 
+
+  agent { 
+
+    kubernetes { 
+
+      yaml ''' 
+
+        apiVersion: v1 
+
+        kind: Pod 
+
+        metadata: 
+
+          namespace: devops-tools
+
+        spec: 
+
+          containers: 
+
+          - name: busybox 
+
+            image: busybox 
+
+            command: 
+
+            - cat 
+
+            tty: true 
+
+        ''' 
+
+      showRawYaml false 
+
+    } 
+
+  } 
+
+  stages { 
+
+    stage('Run test') { 
+
+      steps { 
+
+        container('busybox') { 
+
+          sh 'echo "test-01"' 
+
+        } 
+
+      } 
+
+    } 
+
+  } 
+
+} 
