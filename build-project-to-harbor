@@ -1,0 +1,67 @@
+	// git repository info
+	def gitRepository = 'http://azure.host/azure-test/_git/nodejs-demo'
+	def gitBranch = 'main'
+
+	// Image infor in registry
+	def imageGroup = 'nodejs-demo'
+	def appName = "my-app"
+	def namespace = "helm-demo"	
+
+	// harbor-registry credentials
+	def registryCredential = 'harbor-acc'
+	// gitlab credentials
+	def gitlabCredential = 'azure-acc'
+	
+	dockerBuildCommand = '.'
+	def version = "prod-0.${BUILD_NUMBER}"
+
+	pipeline {
+		agent any
+		
+		environment {
+			DOCKER_REGISTRY = 'https://harbor.host'
+			DOCKER_IMAGE_NAME = "${imageGroup}/${appName}"
+			DOCKER_IMAGE = "harbor.host/${DOCKER_IMAGE_NAME}"
+			
+			// Proxy settings
+            HTTP_PROXY  = 'http://proxy.host:8080'
+            HTTPS_PROXY = 'http://proxy.host:8080'
+		}
+
+		stages {
+		
+			stage('Checkout project') 
+			{
+			  steps 
+			  {
+				echo "checkout project"
+				git branch: gitBranch,
+				   credentialsId: gitlabCredential,
+				   url: gitRepository
+				sh "git reset --hard"				
+			  }
+			}
+			stage('Build project') 
+			{
+			  steps 
+			  {
+				sh "npm install"
+			  }
+			}
+			stage('Build docker and push to registry') 
+			{
+			  steps 
+			  {
+				script {
+						app = docker.build("${DOCKER_IMAGE_NAME}:${version}", "--build-arg HTTP_PROXY=${HTTP_PROXY} --build-arg HTTPS_PROXY=${HTTPS_PROXY} ${dockerBuildCommand}")
+						
+						docker.withRegistry( DOCKER_REGISTRY, registryCredential ) {                       
+						   app.push(version)
+						}
+						sh "docker rmi ${DOCKER_IMAGE_NAME} -f"
+						sh "docker rmi ${DOCKER_IMAGE}:${version} -f"				
+					}
+			  }
+			}			
+		}
+	}
